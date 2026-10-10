@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy | Veridone</title>
+<meta name="description" content="What Veridone, its website and its store collect, and why.">
+<link rel="canonical" href="https://woojin0128.github.io/veridone/privacy.html">
+<link rel="alternate" hreflang="ko" href="https://woojin0128.github.io/veridone/ko/privacy.html">
+<link rel="alternate" hreflang="en" href="https://woojin0128.github.io/veridone/privacy.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Privacy | Veridone">
+<meta property="og:description" content="What Veridone, its website and its store collect, and why.">
+<meta property="og:url" content="https://woojin0128.github.io/veridone/privacy.html">
+<meta property="og:image" content="https://woojin0128.github.io/veridone/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#3a33e0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/archivo.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="assets/site.css?v=1.0.0">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href=""><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 16.5l4.6 4.6L23.5 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Veridone</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#stops">What it stops</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/woojin0128/veridone#readme">Docs</a>
+      <a href="https://github.com/woojin0128/veridone">GitHub</a>
+      <a href="ko/" hreflang="ko" lang="ko">한국어</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+<div class="wrap"><article class="prose">
+
+<h1>Privacy</h1>
+<p class="updated">Last updated 2026-10-10</p>
+<h2>The plugin</h2>
+<p>Veridone runs on your computer. Its hooks, CLI and MCP server make no network requests and send no telemetry. It keeps a per-session event log (the first 500 characters of each prompt, commands run, files changed, check results and findings) in Claude Code’s plugin data folder and deletes it after 14 days. Secret values are never logged.</p>
+<h2>License checks</h2>
+<p>When you activate a store license key, and every few days afterwards, Veridone sends the key, the store’s organization ID, a random label for your computer, the Veridone version and your operating system name to Polar’s license API. Nothing about your code, prompts or files is sent. Offline keys and the free trial are checked entirely on your computer.</p>
+<h2>Purchases</h2>
+<p>Polar Software, Inc. processes orders as merchant of record and receives your payment and billing details under <a href="https://polar.sh/legal/privacy">its privacy policy</a>. We receive your name, email address, country and order details from Polar, and use them only to provide your license, support and invoices.</p>
+<h2>This website</h2>
+<p>This site is static and hosted on GitHub Pages. It sets no cookies, runs no analytics and loads no third-party scripts or fonts. GitHub may log visits as described in the <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
+<h2>Your rights</h2>
+<p>You can ask us to access, correct or delete the personal data we hold about you. Reply to your receipt email, or open a GitHub issue asking us to contact you (do not post personal data in public).</p>
+</article></div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="activate.html">Activate a key</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="refunds.html">Refunds</a>
+      <a href="https://github.com/woojin0128/veridone/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/woojin0128/veridone/issues">Support</a>
+    </nav>
+    <p>Veridone 1.0.0 &copy; 2026 woojin0128</p>
+    <p class="disclaimer">Veridone is an independent project. It is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.</p>
+  </div>
+</footer>
+<script src="assets/site.js?v=1.0.0" defer></script>
+</body>
+</html>

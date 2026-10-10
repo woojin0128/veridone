@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activate your license | Veridone</title>
+<meta name="description" content="How to activate a Veridone Pro or Team license key in Claude Code and in CI.">
+<link rel="canonical" href="https://woojin0128.github.io/veridone/activate.html">
+<link rel="alternate" hreflang="ko" href="https://woojin0128.github.io/veridone/ko/activate.html">
+<link rel="alternate" hreflang="en" href="https://woojin0128.github.io/veridone/activate.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Activate your license | Veridone">
+<meta property="og:description" content="How to activate a Veridone Pro or Team license key in Claude Code and in CI.">
+<meta property="og:url" content="https://woojin0128.github.io/veridone/activate.html">
+<meta property="og:image" content="https://woojin0128.github.io/veridone/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#3a33e0">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/archivo.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="assets/site.css?v=1.0.0">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href=""><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 16.5l4.6 4.6L23.5 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Veridone</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#stops">What it stops</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/woojin0128/veridone#readme">Docs</a>
+      <a href="https://github.com/woojin0128/veridone">GitHub</a>
+      <a href="ko/" hreflang="ko" lang="ko">한국어</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+<div class="wrap"><article class="prose">
+
+<h1>Activate your license</h1>
+<p class="updated">For Veridone 1.0.0 and later.</p>
+<h2>On your computer</h2>
+<ol>
+  <li>Copy your key. It is shown on the order confirmation page and in your customer portal, and looks like <code>VERIDONE-PRO-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code>.</li>
+  <li>Update the plugin so it knows the store: <code>claude plugin update veridone@veridone</code>.</li>
+  <li>In Claude Code, run <code>/veridone:license activate &lt;your key&gt;</code>.</li>
+  <li>Check it with <code>/veridone:license status</code>.</li>
+</ol>
+<p>A key works on up to 3 computers. Veridone re-checks it in the background every few days; without a connection it keeps working for 14 days.</p>
+<h2>In CI</h2>
+<p>Add the key as a secret named <code>VERIDONE_LICENSE_KEY</code>. CI runs validate the key without using one of your computer slots.</p>
+<pre>- uses: woojin0128/veridone@v1
+  with:
+    sarif: veridone.sarif
+    license-key: ${{ secrets.VERIDONE_LICENSE_KEY }}
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: veridone.sarif</pre>
+<h2>Team seats</h2>
+<p>Whoever bought the Team plan assigns seats by email in the customer portal. Each person claims the seat from the invitation email and receives their own <code>VERIDONE-TEAM-…</code> key.</p>
+<h2>Moving to a new computer</h2>
+<p>Run <code>/veridone:license deactivate</code> on the old one, or remove it in the customer portal, then activate on the new one.</p>
+<h2>If something goes wrong</h2>
+<ul>
+  <li><strong>“not connected to a store yet”</strong>: update the plugin and try again.</li>
+  <li><strong>“maximum number of machines”</strong>: free a slot as described above.</li>
+  <li><strong>“Couldn't reach the license server”</strong>: check your connection. Behind a proxy, set <code>NODE_USE_ENV_PROXY=1</code> (Node.js 22.21 or 24 and later).</li>
+  <li>Anything else: <a href="https://github.com/woojin0128/veridone/issues">open an issue</a> without posting your key, or reply to your receipt email.</li>
+</ul>
+<h2>Not ready to buy?</h2>
+<p><code>/veridone:license trial</code> unlocks every paid feature on this computer for 14 days. No card, no account.</p>
+</article></div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="Footer">
+      <a href="activate.html">Activate a key</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="refunds.html">Refunds</a>
+      <a href="https://github.com/woojin0128/veridone/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/woojin0128/veridone/issues">Support</a>
+    </nav>
+    <p>Veridone 1.0.0 &copy; 2026 woojin0128</p>
+    <p class="disclaimer">Veridone is an independent project. It is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.</p>
+  </div>
+</footer>
+<script src="assets/site.js?v=1.0.0" defer></script>
+</body>
+</html>
