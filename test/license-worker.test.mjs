@@ -5,6 +5,9 @@ import crypto from 'node:crypto';
 import worker, { signKey, verifySignature, licenseForOrder } from '../tools/license-worker/worker.mjs';
 import { verifyLicense } from '../scripts/lib/license.mjs';
 
+// Workers have a global WebCrypto; Node 18 exposes it only as node:crypto's webcrypto.
+if (!globalThis.crypto) globalThis.crypto = crypto.webcrypto;
+
 const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
 const PUB = publicKey.export({ type: 'spki', format: 'pem' });
 const PRIV = privateKey.export({ type: 'pkcs8', format: 'pem' });
