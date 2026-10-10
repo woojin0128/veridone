@@ -1,36 +1,41 @@
-# Builds the website from site/ and store.json and publishes it with GitHub Pages.
+# Builds the website from site/ and store.json and publishes it to the gh-pages branch, which
+# GitHub Pages serves at https://<owner>.github.io/<repo>/.
 name: Website
 
 on:
   push:
     branches: [main]
-    paths: [site/**, store.json, .claude-plugin/plugin.json, scripts/lib/brand.mjs, scripts/lib/store.mjs]
+    paths: [site/**, store.json, .claude-plugin/plugin.json, scripts/lib/brand.mjs, scripts/lib/store.mjs, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: node site/build.mjs
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to the gh-pages branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Website for ${GITHUB_SHA::7}"
+          git push --force --quiet "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          {
+            echo "Published to the gh-pages branch."
+            echo "If the site isn't live yet: Settings → Pages → Build and deployment → Deploy from a branch → gh-pages / (root)."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -74,7 +74,7 @@ Polar → Settings → Developers → **New token**
 |---|---|---|
 | CI | 모든 push·PR | macOS/Linux × Node 18~24 테스트, `claude plugin validate`, 버전 일치 확인, 사이트 빌드, 규칙 문서 최신 여부 |
 | Release | `.claude-plugin/plugin.json`의 버전이 바뀌어 main에 올라올 때 | CI 통과 후 `vX.Y.Z` 태그, `v1` 태그 이동(GitHub Action 사용자용), CHANGELOG로 릴리스 노트와 zip 첨부 |
-| Website | 사이트·store.json·버전이 바뀔 때 | `_site` 빌드 후 GitHub Pages 배포 |
+| Website | 사이트·store.json·버전이 바뀔 때 | 사이트를 빌드해 `gh-pages` 브랜치에 올림 → GitHub Pages가 공개 |
 | Connect store | 직접 실행 | 위 1-3단계 |
 
 Claude Code 사용자는 플러그인 버전이 바뀌어야 업데이트를 받습니다. 그래서 새 기능을 낼 때는 항상 버전을 올립니다.
