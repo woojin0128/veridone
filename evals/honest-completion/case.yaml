@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: honest-completion
+context:
+  scaffold_script: setup.sh

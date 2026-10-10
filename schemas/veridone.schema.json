@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/woojin0128/veridone/main/schemas/veridone.schema.json",
+  "title": "Veridone configuration",
+  "description": "Configuration for the Veridone Claude Code plugin: .claude/veridone.json (shared), .claude/veridone.local.json (personal), ~/.claude/veridone.json (user) and ~/.claude/veridone-policy.json (organization policy, Team plan).",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "globList": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns (**, *, ?, [abc], {a,b}); a pattern without '/' matches the file name anywhere." },
+    "guardLevel": { "enum": ["deny", "ask", "warn", "off"] },
+    "integrityAction": { "enum": ["block", "warn", "info", "off"] },
+    "command": { "type": ["string", "null"] }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "mode": {
+      "enum": ["strict", "standard", "relaxed", "off"],
+      "default": "standard",
+      "description": "strict: medium integrity findings block, the gate needs tests + typecheck on the full suite. standard: high findings block, the gate needs the primary check. relaxed: findings warn, only false claims are challenged. off: Veridone does nothing."
+    },
+    "locked": {
+      "type": "boolean",
+      "description": "Organization policy only (Team plan): when true, the policy's mode wins over session modes and environment overrides."
+    },
+    "guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "rules": {
+          "type": "object",
+          "description": "Override the level of individual guard rules, e.g. {\"publish-release\": \"off\", \"git-force-push-protected\": \"deny\"}. See docs/rules.md.",
+          "additionalProperties": { "$ref": "#/$defs/guardLevel" }
+        },
+        "allowCommands": { "type": "array", "items": { "type": "string" }, "description": "Regular expressions; a Bash command matching one is never guarded." },
+        "protectedBranches": { "$ref": "#/$defs/globList", "description": "Branches where force-pushes need confirmation (added to the defaults)." },
+        "disposableDirs": { "type": "array", "items": { "type": "string" }, "description": "Directory names that are safe to delete (build output, caches)." },
+        "sensitiveFiles": { "$ref": "#/$defs/globList", "description": "Files whose contents must not be read into the conversation." },
+        "sensitiveExceptions": { "$ref": "#/$defs/globList", "description": "Exceptions to sensitiveFiles (e.g. .env.example)." },
+        "protectedFiles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deny": { "$ref": "#/$defs/globList", "description": "Paths the agent may never edit." },
+            "ask": { "$ref": "#/$defs/globList", "description": "Paths that need confirmation before an edit (lockfiles, vendored code)." }
+          }
+        },
+        "guardrailFiles": { "$ref": "#/$defs/globList", "description": "Hook/permission/safety configuration the agent must not change on its own." },
+        "migrationDirs": { "$ref": "#/$defs/globList", "description": "Where database migrations live; editing a committed migration needs confirmation." },
+        "scanScripts": { "type": "boolean", "default": true, "description": "Also analyze local shell scripts the agent runs (./deploy.sh)." },
+        "customRules": {
+          "type": "array",
+          "description": "Team command rules (Pro). Matched against the whole Bash command line.",
+          "items": {
+            "type": "object",
+            "required": ["id", "pattern"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z0-9_.:-]+$" },
+              "pattern": { "type": "string", "description": "JavaScript regular expression." },
+              "flags": { "type": "string", "pattern": "^[imsu]*$" },
+              "level": { "enum": ["deny", "ask", "warn"], "default": "ask" },
+              "title": { "type": "string" },
+              "message": { "type": "string" },
+              "fix": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "block": { "enum": ["high", "off"], "default": "high", "description": "Deny writes that add high-confidence credentials to source files." },
+        "allowFiles": { "$ref": "#/$defs/globList", "description": "Files where credential-looking values are expected (test fixtures)." }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "rules": {
+          "type": "object",
+          "description": "Override the action of individual integrity rules, e.g. {\"console-log\": \"off\", \"any-cast\": \"warn\"}. See docs/rules.md.",
+          "additionalProperties": { "$ref": "#/$defs/integrityAction" }
+        },
+        "ignore": { "$ref": "#/$defs/globList", "description": "Paths never scanned (added to the defaults)." },
+        "customRules": {
+          "type": "array",
+          "description": "Team code rules (Pro). Matched against lines an edit adds.",
+          "items": {
+            "type": "object",
+            "required": ["id", "pattern"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[A-Za-z0-9_.:-]+$" },
+              "pattern": { "type": "string", "description": "JavaScript regular expression." },
+              "flags": { "type": "string", "pattern": "^[imsu]*$" },
+              "paths": { "$ref": "#/$defs/globList", "description": "Only scan these files." },
+              "exclude": { "$ref": "#/$defs/globList" },
+              "severity": { "enum": ["high", "medium", "low"], "default": "medium" },
+              "title": { "type": "string" },
+              "message": { "type": "string" },
+              "fix": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "verify": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stopGate": { "type": "boolean", "default": true, "description": "Ask Claude to verify (or disclose) before finishing a turn that changed code." },
+        "claimCheck": { "type": "boolean", "default": true, "description": "Challenge 'all tests pass'-style claims that the session's evidence contradicts." },
+        "commands": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Override detected verification commands. Use null or \"\" to disable a category.",
+          "properties": {
+            "test": { "$ref": "#/$defs/command" },
+            "typecheck": { "$ref": "#/$defs/command" },
+            "lint": { "$ref": "#/$defs/command" },
+            "build": { "$ref": "#/$defs/command" }
+          }
+        },
+        "require": {
+          "oneOf": [
+            { "const": "auto" },
+            { "type": "array", "items": { "enum": ["test", "typecheck", "lint", "build"] } }
+          ],
+          "default": "auto",
+          "description": "Checks that must pass after the last change before Claude finishes. auto: test (or typecheck/build); strict mode adds typecheck."
+        },
+        "maxBlocksPerTurn": { "type": "integer", "minimum": 0, "maximum": 8, "default": 1 },
+        "ignore": { "$ref": "#/$defs/globList", "description": "Changed files that never require verification (docs, images)." }
+      }
+    },
+    "condense": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "minChars": { "type": "integer", "minimum": 1000, "default": 6000 },
+        "targetChars": { "type": "integer", "minimum": 500, "default": 3500 }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onStart": { "type": "boolean", "default": true, "description": "Tell Claude the verification commands at session start." },
+        "afterCompact": { "type": "boolean", "default": true, "description": "Restore a session brief after context compaction or on resume." }
+      }
+    },
+    "loopBreaker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "threshold": { "type": "integer", "minimum": 2, "maximum": 10, "default": 3 }
+      }
+    }
+  }
+}

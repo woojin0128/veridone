@@ -1,0 +1,77 @@
+# Publishes a release whenever the version in .claude-plugin/plugin.json changes on main:
+# runs the checks, tags vX.Y.Z, moves the major tag (v1) used by the GitHub Action, and creates a
+# GitHub Release with the CHANGELOG section and a zip of the plugin. Claude Code users receive the
+# update through the plugin marketplace (this repository) because the plugin version changed.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [.claude-plugin/plugin.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read version
+        id: v
+        run: |
+          version=$(node -p 'require("./.claude-plugin/plugin.json").version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "major=v${version%%.*}" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v$version is already released; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Release notes from CHANGELOG.md
+        if: steps.v.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const v = process.env.VERSION;
+            const text = fs.readFileSync("CHANGELOG.md", "utf8");
+            const start = text.search(new RegExp(`^## \\[?${v.replace(/\./g, "\\.")}\\]?\\b`, "m"));
+            let notes = "";
+            if (start >= 0) {
+              const rest = text.slice(start).split("\n").slice(1).join("\n");
+              const end = rest.search(/^## /m);
+              notes = (end >= 0 ? rest.slice(0, end) : rest).trim();
+            }
+            const repo = process.env.GITHUB_REPOSITORY;
+            notes = (notes || "See CHANGELOG.md.") + `\n\n**Install or update in Claude Code**\n\n\`\`\`\n/plugin marketplace add ${repo}\n/plugin install veridone@veridone\n\`\`\`\n\nAlready installed? \`claude plugin update veridone@veridone\`.`;
+            fs.writeFileSync("release-notes.md", notes + "\n");'
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Tag and publish
+        if: steps.v.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+          MAJOR: ${{ steps.v.outputs.major }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Veridone $VERSION"
+          git tag -f "$MAJOR"
+          git push origin "v$VERSION"
+          git push --force origin "$MAJOR"
+          git archive --format zip --prefix veridone/ -o "veridone-$VERSION.zip" HEAD
+          gh release create "v$VERSION" "veridone-$VERSION.zip" --title "Veridone $VERSION" --notes-file release-notes.md --latest

@@ -1,0 +1,74 @@
+name: Veridone integrity scan
+description: Flags the shortcuts AI coding agents take to make checks pass — skipped tests, deleted assertions, suppressions, placeholder code, weakened CI and hard-coded secrets — on every pull request.
+author: Veridone
+branding:
+  icon: shield
+  color: red
+
+inputs:
+  base:
+    description: Git ref to compare against. Defaults to the pull request's base branch, or the previous commit on push.
+    required: false
+    default: ""
+  fail-on:
+    description: Lowest severity that fails the job (high, medium, low or none).
+    required: false
+    default: high
+  mode:
+    description: Rule strictness (strict, standard or relaxed). Defaults to the repository's .claude/veridone.json or standard.
+    required: false
+    default: ""
+  summary:
+    description: Write a Markdown findings table to the job summary.
+    required: false
+    default: "true"
+  sarif:
+    description: Also write SARIF to this path for GitHub code scanning (requires a Veridone Pro or Team license key).
+    required: false
+    default: ""
+  license-key:
+    description: Veridone Pro/Team license key. Store it as a repository secret.
+    required: false
+    default: ""
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF file, when one was written.
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        VERIDONE_BASE: ${{ inputs.base }}
+        VERIDONE_FAIL_ON: ${{ inputs.fail-on }}
+        VERIDONE_SCAN_MODE: ${{ inputs.mode }}
+        VERIDONE_SUMMARY: ${{ inputs.summary }}
+        VERIDONE_SARIF: ${{ inputs.sarif }}
+        VERIDONE_LICENSE_KEY: ${{ inputs.license-key }}
+        VERIDONE_BEFORE: ${{ github.event.before }}
+        VERIDONE_CLI: ${{ github.action_path }}/scripts/veridone.mjs
+      run: |
+        set -euo pipefail
+        base="$VERIDONE_BASE"
+        if [ -z "$base" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then
+          git fetch --no-tags --quiet origin "$GITHUB_BASE_REF" || true
+          base="origin/$GITHUB_BASE_REF"
+        fi
+        if [ -z "$base" ] && [ -n "$VERIDONE_BEFORE" ] && [ "$VERIDONE_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+          base="$VERIDONE_BEFORE"
+        fi
+        if [ -z "$base" ]; then base="HEAD~1"; fi
+        args=(scan --base "$base")
+        if [ -n "$VERIDONE_SCAN_MODE" ]; then args+=(--mode "$VERIDONE_SCAN_MODE"); fi
+
+        if [ "$VERIDONE_SUMMARY" = "true" ] && [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          node "$VERIDONE_CLI" "${args[@]}" --format markdown --fail-on "$VERIDONE_FAIL_ON" >> "$GITHUB_STEP_SUMMARY" || true
+        fi
+        if [ -n "$VERIDONE_SARIF" ]; then
+          node "$VERIDONE_CLI" "${args[@]}" --format sarif --fail-on none > "$VERIDONE_SARIF"
+          echo "sarif-file=$VERIDONE_SARIF" >> "$GITHUB_OUTPUT"
+        fi
+        node "$VERIDONE_CLI" "${args[@]}" --format github --fail-on "$VERIDONE_FAIL_ON"

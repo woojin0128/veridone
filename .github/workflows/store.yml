@@ -1,0 +1,79 @@
+# Connects the Polar store: creates the license-key benefits, products and checkout links, writes
+# store.json, bumps the patch version and republishes the website and the plugin.
+#
+# Before running it: add a repository secret named POLAR_ACCESS_TOKEN (Polar → Settings →
+# Developers → New token, organization scopes: organizations:read, products:read/write,
+# benefits:read/write, checkout_links:read/write). Then: Actions → Connect store → Run workflow.
+name: Connect store
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Polar environment
+        type: choice
+        options: [production, sandbox]
+        default: production
+      lifetime:
+        description: Offer the Founder's lifetime license
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: store
+  cancel-in-progress: false
+
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the secret
+        env:
+          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$POLAR_ACCESS_TOKEN" ]; then
+            {
+              echo "### POLAR_ACCESS_TOKEN is missing"
+              echo "Create an Organization Access Token in Polar (Settings → Developers) and add it under"
+              echo "Settings → Secrets and variables → Actions → New repository secret, named POLAR_ACCESS_TOKEN."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Repository secret POLAR_ACCESS_TOKEN is not set."
+            exit 1
+          fi
+      - name: Create products and write store.json
+        env:
+          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
+          POLAR_ENVIRONMENT: ${{ inputs.environment }}
+          VERIDONE_LIFETIME: ${{ inputs.lifetime && 'on' || 'off' }}
+        run: node tools/store-setup.mjs | tee store-setup.log
+      - name: Commit, bump the version and republish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### Store connected (${{ inputs.environment }})"
+            echo '```'
+            cat store-setup.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet -- store.json; then
+            echo "store.json is unchanged; nothing to publish." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node tools/bump-version.mjs patch --note "Connected the ${{ inputs.environment }} store: paid plans can be bought and activated."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add store.json .claude-plugin/plugin.json package.json CHANGELOG.md
+          git commit -m "Connect ${{ inputs.environment }} store"
+          git push
+          # pushes made with GITHUB_TOKEN don't start other workflows, so start them explicitly
+          gh workflow run pages.yml --ref main
+          gh workflow run release.yml --ref main

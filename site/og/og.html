@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body { background: var(--paper); display: grid; grid-template-columns: 520px 1fr; gap: 36px; padding: 64px 64px 0; box-sizing: border-box; }
+  .wordmark { font-size: 1.6rem; margin-bottom: 40px; }
+  h1 { font-size: 4.8rem; line-height: .96; font-weight: 800; font-stretch: 125%; letter-spacing: -0.02em; margin: 0 0 28px; color: var(--ink); }
+  p { font-size: 1.45rem; line-height: 1.45; color: var(--ink-soft); margin: 0; }
+  .terminal { margin-top: 18px; font-size: .9rem; }
+  .transcript { min-height: 0; padding-bottom: 1.6rem; }
+  .transcript li { grid-template-columns: 5rem 1fr; }
+  .transcript li.stamped .what { padding-right: 8rem; }
+</style></head>
+<body>
+<div>
+  <div class="wordmark"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 16.5l4.6 4.6L23.5 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Veridone</div>
+  <h1>Claude can't fake “done.”</h1>
+  <p>Evidence-based guardrails for Claude Code.</p>
+</div>
+<div class="terminal">
+  <div class="terminal-bar"><span class="dots"><i></i><i></i><i></i></span><span>claude code</span><span></span></div>
+  <ol class="transcript">
+    <li class="stamped"><span class="who">claude</span><span class="what">Done. All tests pass.</span><span class="stamp stamp-no">UNVERIFIED</span></li>
+    <li><span class="who who-veridone">veridone</span><span class="what note">No test has run since src/price.js changed.</span></li>
+    <li><span class="who">claude</span><span class="what cmd">npm test</span></li>
+    <li><span class="who"></span><span class="what bad">not ok 2 - discount on 9.99 at 15%</span></li>
+    <li><span class="who">claude</span><span class="what">Fixing src/price.js and re-running.</span></li>
+    <li><span class="who"></span><span class="what good"># pass 4  # fail 0</span></li>
+    <li class="stamped"><span class="who">claude</span><span class="what">Done: 4/4 pass, after the last edit.</span><span class="stamp stamp-yes">VERIFIED</span></li>
+  </ol>
+</div>
+</body></html>

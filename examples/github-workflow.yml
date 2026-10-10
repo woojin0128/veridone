@@ -1,0 +1,30 @@
+# .github/workflows/veridone.yml — block AI shortcuts (skipped tests, removed assertions,
+# suppressions, placeholder code, weakened CI, hard-coded secrets) in pull requests.
+name: Veridone
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write   # only needed for the SARIF upload below
+
+jobs:
+  veridone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # Veridone compares the PR against its merge base
+
+      - uses: woojin0128/veridone@v1
+        with:
+          fail-on: high           # high | medium | low | none
+          # Pro/Team: findings in GitHub code scanning
+          # sarif: veridone.sarif
+          # license-key: ${{ secrets.VERIDONE_LICENSE_KEY }}
+
+      # - uses: github/codeql-action/upload-sarif@v3
+      #   if: always()
+      #   with:
+      #     sarif_file: veridone.sarif

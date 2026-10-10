@@ -1,0 +1,19 @@
+{
+  "name": "veridone",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Evidence-based guardrails for Claude Code: completion gate, anti-cheat integrity scanner, command and secret guard.",
+  "type": "module",
+  "license": "Elastic-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "veridone": "scripts/veridone.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "docs": "node tools/gen-rules-doc.mjs",
+    "validate": "claude plugin validate --strict ."
+  }
+}

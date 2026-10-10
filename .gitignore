@@ -1,0 +1,8 @@
+node_modules/
+evals/results/
+*.log
+.DS_Store
+# never commit license signing keys
+*.pem
+.veridone-vendor/
+_site/

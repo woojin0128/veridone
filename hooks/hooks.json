@@ -1,0 +1,447 @@
+{
+  "description": "Veridone: completion gate, integrity scanner, command guard, output condenser and compaction-proof session brief",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "SessionStart"
+            ],
+            "timeout": 15,
+            "statusMessage": "Veridone: loading session brief"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "UserPromptSubmit"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.env)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.env.*)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.envrc)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.dev.vars)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*.pem)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*.key)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*.p12)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*.pfx)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/id_rsa*)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/id_ed25519*)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/id_ecdsa*)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/id_dsa)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.ssh/**)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.aws/**)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.azure/**)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.kube/**)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.config/gcloud/**)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(~/.docker/config.json)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.npmrc)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.pypirc)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.netrc)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.git-credentials)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/credentials.json)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/service-account*.json)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*serviceaccount*.json)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/secrets.{json,yml,yaml})"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/terraform.tfstate*)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/*.tfvars)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//**/.vault-token)"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10,
+            "if": "Read(//proc/*/environ)"
+          }
+        ]
+      },
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PreToolUse"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PostToolUse"
+            ],
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PostToolUse"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "PostToolUseFailure"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hook.mjs",
+              "Stop"
+            ],
+            "timeout": 30,
+            "statusMessage": "Veridone: checking completion evidence"
+          }
+        ]
+      }
+    ]
+  }
+}

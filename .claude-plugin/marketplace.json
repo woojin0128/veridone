@@ -1,0 +1,26 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "veridone",
+  "owner": {
+    "name": "woojin0128",
+    "url": "https://github.com/woojin0128/veridone"
+  },
+  "metadata": {
+    "description": "Veridone — evidence-based guardrails for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "veridone",
+      "source": "./",
+      "description": "Claude can't fake 'done': an evidence-based completion gate, an anti-cheat scanner for test tampering and other shortcuts, a destructive-command and secret guard, noisy-output condensing, compaction-proof memory and a repo-map MCP server.",
+      "category": "development",
+      "tags": [
+        "verification",
+        "testing",
+        "guardrails",
+        "safety",
+        "code-quality"
+      ]
+    }
+  ]
+}

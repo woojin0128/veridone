@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --version && git --version
+      - run: node --test test/*.test.mjs
+
+  package:
+    name: Plugin manifest and website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate the plugin with Claude Code
+        run: |
+          npm install --global --no-fund --no-audit @anthropic-ai/claude-code
+          claude plugin validate --strict .
+      - name: Versions agree
+        run: |
+          node -e '
+            const p = require("./.claude-plugin/plugin.json").version;
+            const n = require("./package.json").version;
+            if (p !== n) { console.error(`plugin.json ${p} != package.json ${n}`); process.exit(1); }
+            console.log(`version ${p}`);'
+      - name: Build the website
+        run: node site/build.mjs
+      - name: Rules reference is up to date
+        run: |
+          node tools/gen-rules-doc.mjs
+          git diff --exit-code -- docs/rules.md
+
+  integrity:
+    name: Veridone scan (dogfooding)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./
+        with:
+          fail-on: high

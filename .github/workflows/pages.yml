@@ -1,0 +1,36 @@
+# Builds the website from site/ and store.json and publishes it with GitHub Pages.
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: [site/**, store.json, .claude-plugin/plugin.json, scripts/lib/brand.mjs, scripts/lib/store.mjs]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node site/build.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

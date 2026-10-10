@@ -1,0 +1,12 @@
+# Cloudflare Workers config for automatic license delivery.
+# Deploy: npx wrangler deploy   (then set the secrets listed in README.md)
+name = "veridone-license"
+main = "worker.mjs"
+compatibility_date = "2026-01-01"
+
+[vars]
+MAIL_FROM = "Veridone <license@example.com>"
+SUPPORT_EMAIL = "support@example.com"
+# Map store product IDs (Polar) or variant IDs (Lemon Squeezy) to plans.
+# "days" omitted = lifetime key. 400 days = one year plus a grace month for renewals.
+PLANS = '{"POLAR_PRODUCT_ID_PRO_YEARLY": {"plan": "pro", "days": 400}, "POLAR_PRODUCT_ID_PRO_LIFETIME": {"plan": "pro"}, "POLAR_PRODUCT_ID_TEAM_YEARLY": {"plan": "team", "days": 400, "seatsFromQuantity": true}}'
