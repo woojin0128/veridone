@@ -128,7 +128,7 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
   const created = [];
 
   // 1. license-key benefits
-  const existingBenefits = await api.list('/v1/benefits/', { organization_id: org.id, type_filter: 'license_keys' });
+  const existingBenefits = await api.list('/v1/benefits/', { organization_id: org.id, type: 'license_keys' });
   const benefitIds = {};
   const benefitFor = async (key, overrideProps = null) => {
     const sku = overrideProps ? `${key}-bundle` : key;
@@ -197,7 +197,7 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
       link = dryRun
         ? { url: `https://buy.polar.sh/(dry-run)/${spec.sku}` }
         : await api.post('/v1/checkout-links/', {
-          payment_processor: 'stripe', product_id: product.id, allow_discount_codes: true,
+          payment_processor: 'stripe', products: [product.id], allow_discount_codes: true,
           label: `${used.name} — website`, metadata: { veridone_sku: spec.sku },
         });
     }

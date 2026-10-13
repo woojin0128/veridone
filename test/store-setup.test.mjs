@@ -20,7 +20,7 @@ function fakePolar({ orgs = [{ id: crypto.randomUUID(), slug: 'veridone', name: 
     const q = u.searchParams;
     if (method === 'GET' && u.pathname === '/v1/organizations/') return page(orgs);
     if (u.pathname === '/v1/benefits/') {
-      if (method === 'GET') return page(db.benefits.filter((b) => b.organization_id === q.get('organization_id') && (!q.get('type_filter') || b.type === q.get('type_filter'))));
+      if (method === 'GET') return page(db.benefits.filter((b) => b.organization_id === q.get('organization_id') && (!q.get('type') || b.type === q.get('type'))));
       const b = { id: crypto.randomUUID(), ...body, created_at: new Date().toISOString() };
       db.benefits.push(b);
       return json(201, b);
@@ -40,7 +40,8 @@ function fakePolar({ orgs = [{ id: crypto.randomUUID(), slug: 'veridone', name: 
       return json(200, p);
     }
     if (u.pathname === '/v1/checkout-links/') {
-      if (method === 'GET') return page(db.links.filter((l) => !q.get('product_id') || l.product_id === q.get('product_id')));
+      if (method === 'GET') return page(db.links.filter((l) => !q.get('product_id') || (l.products || []).includes(q.get('product_id'))));
+      if (!Array.isArray(body.products) || !body.products.length) return json(422, { detail: [{ loc: ['body', 'products'], msg: 'Field required', type: 'missing' }] });
       const l = { id: crypto.randomUUID(), ...body, url: `https://buy.polar.sh/polar_cl_${crypto.randomBytes(6).toString('hex')}` };
       db.links.push(l);
       return json(201, l);
@@ -135,8 +136,11 @@ describe('store setup', () => {
     assert.equal(picked.store.organizationId, 'b');
   });
 
-  test('the catalog matches what the plugin and website expect', () => {
+  test('the catalog matches what the plugin, the website and Polar accept', () => {
     assert.deepEqual(Object.keys(CATALOG.benefits), ['pro', 'team']);
+    // Polar: benefit descriptions are 3–42 characters (polar/benefit/strategies/base/schemas.py)
+    for (const b of Object.values(CATALOG.benefits)) assert.ok(b.description.length >= 3 && b.description.length <= 42, b.description);
+    assert.ok('Veridone Team license key (team bundle)'.length <= 42);
     const bundled = loadStore();
     for (const b of Object.values(CATALOG.benefits)) assert.ok(bundled.keyPrefixes[b.properties.prefix], `${b.properties.prefix} maps to a plan`);
   });
