@@ -43,9 +43,9 @@ From a shell: `node scripts/veridone.mjs license activate <key> [--label "work l
 | Sold through | the store (Polar) | direct invoice, on request |
 | Checked | online at activation, then in the background every 3 days | locally, against an Ed25519 signature |
 | Without a connection | keeps working for 14 days after the last successful check | always works |
-| Cancelled, refunded, expired | paid features switch off at the next check | at the expiry date in the key |
+| Subscription ended, key revoked (e.g. with a refund), expired | paid features switch off at the next check | at the expiry date in the key |
 
-Store-key checks never run inside a hook: activation is a command you run, and re-checks happen in a detached background process started at session start, so they never slow Claude down. A check sends the key, the store's organization id, the activation id, and (at activation only) the computer label, Veridone version and OS name to Polar's public license API. Nothing about your code, prompts or files is sent.
+Store-key checks never run inside a hook: activation is a command you run, and re-checks happen in a detached background process started at session start, so they never slow Claude down. A check sends the key, the store's organization id and the activation id to Polar's public license API; activation also sends the computer label, Veridone version and OS name. A build released before the store opened also downloads the published `store.json` from GitHub when you activate. Nothing about your code, prompts or files is sent.
 
 When a license stops being active, Veridone tells you once at the start of a session. Only the paid features switch off; the free guardrails keep working.
 
@@ -74,5 +74,6 @@ The policy is applied last, over user, project, session and environment settings
 ## For the seller
 
 - `tools/store-setup.mjs` (or the **Connect store** GitHub workflow) creates the products, license-key benefits and checkout links in Polar and writes [`store.json`](../store.json), which the plugin and the website read.
+- **Refunds don't revoke keys by themselves.** In Polar, refund a one-time order with *Revoke benefits* ticked; for a subscription, revoke the subscription (cancel immediately) and then refund. Polar revokes the key, and Veridone's paid features stop at the next check.
 - `tools/license-admin.mjs` issues offline `VD1` keys for invoiced or air-gapped customers. Run `init` once to create the signing key (keep it private) and publish a release with the embedded public key.
 - `tools/license-worker/` is an optional webhook worker that emails offline keys automatically, for stores without built-in license keys.

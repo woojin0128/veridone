@@ -116,7 +116,7 @@ const T = {
       ['What about false positives?', 'Rules are tuned for precision and only look at lines the current edit added. Silence one line with a <code>veridone-allow: &lt;rule&gt; &lt;reason&gt;</code> comment, a rule in <code>.claude/veridone.json</code>, or everything with <code>/veridone:mode relaxed</code>.'],
       ['Does it make Claude do busywork?', 'The completion gate pushes back at most once per turn, and an honest “I couldn’t run the tests because…” satisfies it.'],
       ['Can Claude just turn it off?', 'Not quietly. Loosening the mode, editing Veridone’s config, Claude’s settings or git hooks, and disabling the plugin all need your confirmation. On Team, a locked organization policy can’t be overridden from the project at all.'],
-      ['Does my code leave my machine?', 'No. Hooks, the CLI and the MCP server make no network requests and send no telemetry. Only paid license keys are checked with the store, every few days, and that request contains the key and a random machine label, nothing about your code.'],
+      ['Does my code leave my machine?', 'No. Nothing sends telemetry, and the hooks and the MCP server make no network requests. The only network traffic is the license check for paid keys, at activation and every few days in the background: it sends the key and a random computer label, nothing about your code.'],
       ['Is it a security sandbox?', 'No. It stops mistakes and shortcuts from a cooperative agent. Use Claude Code’s sandboxing and permissions to contain an untrusted one.'],
       ['Does it work with other agents?', 'The CLI scan and the GitHub Action work with any tool. The hooks are specific to Claude Code.'],
     ],
@@ -206,7 +206,7 @@ const T = {
       ['오탐은 없나요?', '규칙은 정밀도 위주로 조정돼 있고, 이번 수정이 추가한 줄만 봅니다. 한 줄은 <code>veridone-allow: &lt;규칙&gt; &lt;이유&gt;</code> 주석으로, 규칙 하나는 <code>.claude/veridone.json</code>으로, 전체는 <code>/veridone:mode relaxed</code>로 조정할 수 있습니다.'],
       ['Claude에게 쓸데없는 일을 시키지 않나요?', '완료 게이트는 한 턴에 최대 한 번만 되돌려 보내고, “~ 때문에 테스트를 돌리지 못했습니다” 같은 솔직한 설명이면 통과합니다.'],
       ['Claude가 그냥 꺼버릴 수 있나요?', '몰래는 안 됩니다. 모드를 낮추거나 Veridone 설정, Claude 설정, git 훅을 바꾸거나 플러그인을 끄려면 사용자 확인이 필요합니다. Team 플랜의 잠금 조직 정책은 프로젝트 쪽에서 덮어쓸 수 없습니다.'],
-      ['코드가 밖으로 나가나요?', '아니요. 훅, CLI, MCP 서버 모두 네트워크 요청과 텔레메트리가 없습니다. 유료 라이선스 키만 며칠에 한 번 스토어에서 확인하며, 이때 보내는 것은 키와 무작위 기기 이름뿐이고 코드에 관한 정보는 없습니다.'],
+      ['코드가 밖으로 나가나요?', '아니요. 텔레메트리를 보내지 않고, 훅과 MCP 서버는 네트워크 요청을 하지 않습니다. 유일한 네트워크 통신은 유료 키의 라이선스 확인(활성화할 때와 며칠마다 백그라운드)이며, 키와 무작위 컴퓨터 이름만 보내고 코드에 관한 정보는 보내지 않습니다.'],
       ['보안 샌드박스인가요?', '아닙니다. 협조적인 에이전트의 실수와 지름길을 막는 장치입니다. 신뢰할 수 없는 에이전트를 가두려면 Claude Code의 샌드박스와 권한 설정을 쓰세요.'],
       ['다른 에이전트에서도 되나요?', 'CLI 검사와 GitHub Action은 어떤 도구와도 쓸 수 있습니다. 훅은 Claude Code 전용입니다.'],
     ],
@@ -490,11 +490,12 @@ const PAGES_EN = {
 <h2>In CI</h2>
 <p>Add the key as a secret named <code>VERIDONE_LICENSE_KEY</code>. CI runs validate the key without using one of your computer slots.</p>
 <pre>- uses: ${esc(MARKET)}@v1
+  id: veridone
   with:
     sarif: veridone.sarif
     license-key: \${{ secrets.VERIDONE_LICENSE_KEY }}
 - uses: github/codeql-action/upload-sarif@v3
-  if: always()
+  if: always() &amp;&amp; steps.veridone.outputs.sarif-file != ''
   with:
     sarif_file: veridone.sarif</pre>
 <h2>Team seats</h2>
@@ -504,7 +505,7 @@ const PAGES_EN = {
 <h2>If something goes wrong</h2>
 <ul>
   <li><strong>“not connected to a store yet”</strong>: update the plugin and try again.</li>
-  <li><strong>“maximum number of machines”</strong>: free a slot as described above.</li>
+  <li><strong>“maximum number of computers”</strong>: free a slot as described above.</li>
   <li><strong>“Couldn't reach the license server”</strong>: check your connection. Behind a proxy, set <code>NODE_USE_ENV_PROXY=1</code> (Node.js 22.21 or 24 and later).</li>
   <li>Anything else: <a href="${REPO_URL}/issues">open an issue</a> without posting your key, or reply to your receipt email.</li>
 </ul>
@@ -538,9 +539,9 @@ const PAGES_EN = {
 <h1>Privacy</h1>
 <p class="updated">Last updated ${UPDATED}</p>
 <h2>The plugin</h2>
-<p>Veridone runs on your computer. Its hooks, CLI and MCP server make no network requests and send no telemetry. It keeps a per-session event log (the first 500 characters of each prompt, commands run, files changed, check results and findings) in Claude Code’s plugin data folder and deletes it after 14 days. Secret values are never logged.</p>
+<p>Veridone runs on your computer. Nothing in it sends telemetry, and its hooks and MCP server make no network requests; the command-line tool contacts the store only for the license checks described below. It keeps a per-session event log (the first 500 characters of each prompt, commands run, files changed, check results and findings) in Claude Code’s plugin data folder and deletes it after 14 days. Secret values are never logged.</p>
 <h2>License checks</h2>
-<p>When you activate a store license key, and every few days afterwards, Veridone sends the key, the store’s organization ID, a random label for your computer, the Veridone version and your operating system name to Polar’s license API. Nothing about your code, prompts or files is sent. Offline keys and the free trial are checked entirely on your computer.</p>
+<p>When you activate a store license key, and every few days afterwards, Veridone sends the key, the store’s organization ID and the activation ID to Polar’s license API; activating also sends a random label for your computer, the Veridone version and your operating system name. A key given in <code>VERIDONE_LICENSE_KEY</code> (for example in CI) is checked the same way, without an activation. Versions of Veridone released before the store opened also download the store’s public configuration from GitHub. Nothing about your code, prompts or files is sent. The free trial is recorded entirely on your computer.</p>
 <h2>Purchases</h2>
 <p>Polar Software, Inc. processes orders as merchant of record and receives your payment and billing details under <a href="https://polar.sh/legal/privacy">its privacy policy</a>. We receive your name, email address, country and order details from Polar, and use them only to provide your license, support and invoices.</p>
 <h2>This website</h2>
@@ -555,7 +556,7 @@ const PAGES_EN = {
   <li><strong>Renewals:</strong> a full refund within 7 days of the renewal charge if you forgot to cancel.</li>
   <li><strong>Lifetime licenses:</strong> a full refund within 14 days of purchase.</li>
 </ul>
-<p>To ask for a refund, reply to your receipt email or contact us through the ${portalLink('customer portal')}. Refunds are issued by Polar to your original payment method. When a refund is issued, the license key is deactivated and the free features keep working.</p>
+<p>To ask for a refund, reply to your receipt email or contact us through the ${portalLink('customer portal')}. Refunds are issued by Polar to your original payment method. When we issue a refund we also revoke the license key: Veridone’s paid features stop at its next check, and the free features keep working.</p>
 <p>This policy does not limit any rights you have under the consumer law of your country.</p>`],
 };
 
@@ -574,11 +575,12 @@ const PAGES_KO = {
 <h2>CI에서</h2>
 <p>키를 <code>VERIDONE_LICENSE_KEY</code>라는 이름의 시크릿으로 등록하세요. CI 실행은 컴퓨터 슬롯을 쓰지 않고 키만 확인합니다.</p>
 <pre>- uses: ${esc(MARKET)}@v1
+  id: veridone
   with:
     sarif: veridone.sarif
     license-key: \${{ secrets.VERIDONE_LICENSE_KEY }}
 - uses: github/codeql-action/upload-sarif@v3
-  if: always()
+  if: always() &amp;&amp; steps.veridone.outputs.sarif-file != ''
   with:
     sarif_file: veridone.sarif</pre>
 <h2>Team 좌석</h2>
@@ -588,7 +590,7 @@ const PAGES_KO = {
 <h2>문제가 생기면</h2>
 <ul>
   <li><strong>“not connected to a store yet”</strong>: 플러그인을 업데이트한 뒤 다시 시도하세요.</li>
-  <li><strong>“maximum number of machines”</strong>: 위 방법으로 컴퓨터 슬롯을 하나 비우세요.</li>
+  <li><strong>“maximum number of computers”</strong>: 위 방법으로 컴퓨터 슬롯을 하나 비우세요.</li>
   <li><strong>“Couldn't reach the license server”</strong>: 인터넷 연결을 확인하세요. 프록시 환경이면 <code>NODE_USE_ENV_PROXY=1</code>을 설정하세요(Node.js 22.21 또는 24 이상).</li>
   <li>그 밖의 문제: 키를 올리지 말고 <a href="${REPO_URL}/issues">이슈를 남기거나</a> 영수증 메일에 회신하세요.</li>
 </ul>
@@ -622,9 +624,9 @@ const PAGES_KO = {
 <h1>개인정보 처리방침</h1>
 <p class="updated">최종 수정일 ${UPDATED} · 영문본과 내용이 다르면 <a href="../privacy.html">영문본</a>이 우선합니다.</p>
 <h2>플러그인</h2>
-<p>Veridone은 사용자의 컴퓨터에서 동작합니다. 훅, CLI, MCP 서버는 네트워크 요청이나 텔레메트리를 보내지 않습니다. 세션별 이벤트 기록(각 프롬프트의 앞 500자, 실행한 명령, 바뀐 파일, 검사 결과, 탐지 결과)을 Claude Code의 플러그인 데이터 폴더에 저장하고 14일 뒤 삭제합니다. 비밀값은 기록하지 않습니다.</p>
+<p>Veridone은 사용자의 컴퓨터에서 동작합니다. 텔레메트리를 보내지 않고, 훅과 MCP 서버는 네트워크 요청을 하지 않습니다. 명령줄 도구는 아래의 라이선스 확인 때만 스토어에 연결합니다. 세션별 이벤트 기록(각 프롬프트의 앞 500자, 실행한 명령, 바뀐 파일, 검사 결과, 탐지 결과)을 Claude Code의 플러그인 데이터 폴더에 저장하고 14일 뒤 삭제합니다. 비밀값은 기록하지 않습니다.</p>
 <h2>라이선스 확인</h2>
-<p>스토어 라이선스 키를 활성화할 때와 그 뒤 며칠마다, Veridone은 키, 스토어 조직 ID, 컴퓨터를 구분하는 무작위 이름, Veridone 버전, 운영체제 이름을 Polar의 라이선스 API로 보냅니다. 코드, 프롬프트, 파일에 관한 정보는 보내지 않습니다. 오프라인 키와 무료 체험은 전부 사용자의 컴퓨터에서만 확인합니다.</p>
+<p>스토어 라이선스 키를 활성화할 때와 그 뒤 며칠마다, Veridone은 키, 스토어 조직 ID, 활성화 ID를 Polar의 라이선스 API로 보냅니다. 활성화할 때는 컴퓨터를 구분하는 무작위 이름, Veridone 버전, 운영체제 이름도 함께 보냅니다. <code>VERIDONE_LICENSE_KEY</code>로 준 키(예: CI)는 활성화 없이 같은 방식으로 확인합니다. 스토어 오픈 전에 나온 버전은 스토어의 공개 설정을 GitHub에서 내려받습니다. 코드, 프롬프트, 파일에 관한 정보는 보내지 않습니다. 무료 체험은 전부 사용자의 컴퓨터에만 기록됩니다.</p>
 <h2>구매</h2>
 <p>주문은 판매 대행사인 Polar Software, Inc.가 처리하며, 결제·청구 정보는 <a href="https://polar.sh/legal/privacy">Polar의 개인정보 처리방침</a>에 따라 Polar가 받습니다. 판매자는 Polar로부터 이름, 이메일 주소, 국가, 주문 내역을 받아 라이선스 제공, 지원, 영수증 발행에만 사용합니다.</p>
 <h2>웹사이트</h2>
@@ -639,7 +641,7 @@ const PAGES_KO = {
   <li><strong>구독 갱신:</strong> 해지를 잊었다면 갱신 결제 후 7일 이내에 전액 환불합니다.</li>
   <li><strong>평생 라이선스:</strong> 구매 후 14일 이내에 전액 환불합니다.</li>
 </ul>
-<p>환불은 영수증 메일에 회신하거나 ${portalLink('고객 포털')}을 통해 요청하세요. 환불은 Polar가 원래 결제 수단으로 처리합니다. 환불되면 라이선스 키는 비활성화되고 무료 기능은 계속 동작합니다.</p>
+<p>환불은 영수증 메일에 회신하거나 ${portalLink('고객 포털')}을 통해 요청하세요. 환불은 Polar가 원래 결제 수단으로 처리합니다. 환불할 때 라이선스 키도 함께 회수합니다. Veridone의 유료 기능은 다음 확인 때 꺼지고, 무료 기능은 계속 동작합니다.</p>
 <p>이 정책은 사용자가 거주 국가의 소비자 보호법에 따라 갖는 권리를 제한하지 않습니다.</p>`],
 };
 

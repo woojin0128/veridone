@@ -23,7 +23,7 @@ inputs:
     required: false
     default: "true"
   sarif:
-    description: Also write SARIF to this path for GitHub code scanning (requires a Veridone Pro or Team license key).
+    description: Also write SARIF to this path for GitHub code scanning (requires a Veridone Pro or Team license key; without one the SARIF step is skipped with a warning and the sarif-file output stays empty).
     required: false
     default: ""
   license-key:
@@ -68,7 +68,17 @@ runs:
           node "$VERIDONE_CLI" "${args[@]}" --format markdown --fail-on "$VERIDONE_FAIL_ON" >> "$GITHUB_STEP_SUMMARY" || true
         fi
         if [ -n "$VERIDONE_SARIF" ]; then
-          node "$VERIDONE_CLI" "${args[@]}" --format sarif --fail-on none > "$VERIDONE_SARIF"
-          echo "sarif-file=$VERIDONE_SARIF" >> "$GITHUB_OUTPUT"
+          sarif_status=0
+          node "$VERIDONE_CLI" "${args[@]}" --format sarif --fail-on none > "$VERIDONE_SARIF" 2> "$RUNNER_TEMP/veridone-sarif.err" || sarif_status=$?
+          if [ "$sarif_status" -eq 0 ]; then
+            echo "sarif-file=$VERIDONE_SARIF" >> "$GITHUB_OUTPUT"
+          elif [ "$sarif_status" -eq 3 ]; then
+            # no license here (e.g. a pull request from a fork gets no secrets): skip SARIF, keep the scan
+            echo "::warning title=Veridone SARIF skipped::$(tr '\n' ' ' < "$RUNNER_TEMP/veridone-sarif.err")"
+            rm -f "$VERIDONE_SARIF"
+          else
+            cat "$RUNNER_TEMP/veridone-sarif.err" >&2
+            exit "$sarif_status"
+          fi
         fi
         node "$VERIDONE_CLI" "${args[@]}" --format github --fail-on "$VERIDONE_FAIL_ON"

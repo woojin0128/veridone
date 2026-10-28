@@ -62,7 +62,7 @@ Polar → Settings → Developers → **New token**
 2. 웹사이트에서 "Buy Pro yearly"를 눌러 그 코드로 결제합니다.
 3. 결제 완료 화면에 `VERIDONE-PRO-…` 키가 보이는지, 메일이 오는지 확인합니다.
 4. Claude Code에서 `/veridone:license activate <키>` → `/veridone:license status`가 Pro로 나오면 성공입니다.
-5. Polar 대시보드에서 그 주문을 환불해 보고, `/veridone:license refresh`를 실행하면 "no longer active"가 나오는지 확인합니다.
+5. Polar 대시보드 → Subscriptions에서 그 구독을 **즉시 해지(Revoke)** 한 뒤 `/veridone:license refresh`를 실행해, "no longer active"가 나오고 유료 기능이 꺼지는지 확인합니다(실제 환불 때도 이 해지를 꼭 함께 하세요).
 
 > 진짜 돈 없이 처음부터 끝까지 시험하고 싶다면 https://sandbox.polar.sh 에 따로 가입해 sandbox 토큰으로 같은 워크플로를 `sandbox`로 실행하고 테스트 카드(4242 4242 4242 4242)로 결제해 보세요. 시험이 끝나면 **반드시** production 토큰으로 바꿔 `production`으로 다시 실행해야 합니다(그래야 store.json이 실제 스토어를 가리킵니다).
 
@@ -95,9 +95,9 @@ push하면 나머지(테스트, 태그, 릴리스, 사이트)는 자동입니다
 
 | 상황 | 할 일 |
 |---|---|
-| 환불 요청 | Polar 대시보드 → Orders → Refund. 키는 자동으로 해지되고, 고객의 Veridone은 다음 확인 때(최대 3일) 유료 기능만 꺼집니다. 정책: 첫 구매 14일, 갱신 7일 |
+| 환불 요청 | **Polar는 환불만으로는 키를 회수하지 않습니다.** 1회 결제(평생권): Orders → 주문 → Refund에서 **Revoke benefits(혜택 회수)를 체크**하고 환불. 구독(월간·연간·Team): Subscriptions → 해당 구독을 **즉시 해지(Revoke)** 한 뒤 Orders에서 환불. 그러면 키가 해지되고, 고객의 Veridone은 다음 확인 때(최대 3일) 유료 기능만 꺼집니다. 정책: 첫 구매 14일, 갱신 7일 |
 | 키 분실 | 고객 포털(`polar.sh/<slug>/portal`)에서 이메일 로그인으로 다시 볼 수 있다고 안내 |
-| 컴퓨터 교체, "maximum number of machines" | 옛 컴퓨터에서 `/veridone:license deactivate`, 또는 고객 포털에서 기기 삭제 |
+| 컴퓨터 교체, "maximum number of computers" | 옛 컴퓨터에서 `/veridone:license deactivate`, 또는 고객 포털에서 기기 삭제 |
 | Team 좌석 추가 | 구매자가 고객 포털에서 좌석 수를 늘리고 이메일로 배정 |
 | 인보이스 결제·폐쇄망 기업 | 오프라인 키 발급(아래) |
 

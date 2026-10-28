@@ -50,16 +50,17 @@ steps:
   - uses: actions/checkout@v4
     with: { fetch-depth: 0 }
   - uses: woojin0128/veridone@v1
+    id: veridone
     with:
       sarif: veridone.sarif
       license-key: ${{ secrets.VERIDONE_LICENSE_KEY }}
   - uses: github/codeql-action/upload-sarif@v3
-    if: always()
+    if: always() && steps.veridone.outputs.sarif-file != ''
     with:
       sarif_file: veridone.sarif
 ```
 
-Findings then appear in the repository's **Security → Code scanning** view, with history and dismissals.
+Findings then appear in the repository's **Security → Code scanning** view, with history and dismissals. Pull requests from forks don't receive secrets; there the SARIF step is skipped with a warning and the scan itself still runs.
 
 ## Pre-commit hook
 

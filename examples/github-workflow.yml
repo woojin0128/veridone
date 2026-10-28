@@ -18,6 +18,7 @@ jobs:
           fetch-depth: 0          # Veridone compares the PR against its merge base
 
       - uses: woojin0128/veridone@v1
+        id: veridone
         with:
           fail-on: high           # high | medium | low | none
           # Pro/Team: findings in GitHub code scanning
@@ -25,6 +26,6 @@ jobs:
           # license-key: ${{ secrets.VERIDONE_LICENSE_KEY }}
 
       # - uses: github/codeql-action/upload-sarif@v3
-      #   if: always()
+      #   if: always() && steps.veridone.outputs.sarif-file != ''
       #   with:
       #     sarif_file: veridone.sarif
