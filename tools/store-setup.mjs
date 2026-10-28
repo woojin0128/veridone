@@ -63,6 +63,9 @@ export const CATALOG = {
   ],
 };
 
+/** Pin the API version: newer versions change the product price schema (seat tiers). */
+export const POLAR_API_VERSION = '2026-10';
+
 export function apiBaseFor({ sandbox }) {
   if (process.env.POLAR_API_BASE) return process.env.POLAR_API_BASE.replace(/\/+$/, '');
   return sandbox ? 'https://sandbox-api.polar.sh' : 'https://api.polar.sh';
@@ -86,7 +89,7 @@ export function polarClient({ token, base, fetchImpl = globalThis.fetch }) {
     const url = `${base}${p}`;
     const res = await fetchImpl(url, {
       method,
-      headers: { authorization: `Bearer ${token}`, accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) },
+      headers: { authorization: `Bearer ${token}`, accept: 'application/json', 'polar-version': POLAR_API_VERSION, ...(body ? { 'content-type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(30000),
     });
@@ -112,11 +115,39 @@ export function polarClient({ token, base, fetchImpl = globalThis.fetch }) {
 
 const skuOf = (x) => x?.metadata?.veridone_sku || null;
 
+function money(amount, currency = 'usd') {
+  if (amount == null || Number.isNaN(Number(amount))) return '?';
+  const v = Number(amount) / 100;
+  const n = Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return String(currency).toLowerCase() === 'usd' ? `$${n}` : `${n} ${String(currency).toUpperCase()}`;
+}
+
+/** What a product really costs, read from Polar's product (falls back to the catalog spec in a dry run). */
+export function priceInfo(product, spec) {
+  const live = (product?.prices || []).filter((x) => !x.is_archived);
+  const p = live[0] || spec?.prices?.[0] || {};
+  const interval = product && 'recurring_interval' in product ? product.recurring_interval : spec?.recurring_interval ?? null;
+  const currency = p.price_currency || 'usd';
+  const bundle = product?.metadata?.veridone_variant === 'bundle' || spec?.variant === 'bundle';
+  if (p.amount_type === 'seat_based') {
+    const tiers = p.seat_tiers?.tiers || p.tiers?.tiers || [];
+    const first = tiers[0] || {};
+    const amount = first.price_per_seat ?? (first.unit_amount != null ? Number(first.unit_amount) : null);
+    return { amount, currency, perSeat: true, minSeats: first.min_seats ?? p.minimum_units ?? 1, interval: interval || 'year', label: `${money(amount, currency)} / seat / ${interval || 'year'}` };
+  }
+  const amount = p.price_amount ?? null;
+  const label = bundle ? `${money(amount, currency)} / ${interval || 'year'} for 5 seats` : interval ? `${money(amount, currency)} / ${interval}` : `${money(amount, currency)} once`;
+  return { amount, currency, perSeat: false, minSeats: null, interval: interval || 'once', label };
+}
+
+const withoutStamp = ({ updatedAt, ...rest }) => rest;
+
 /**
  * Create whatever is missing and return the store.json content.
- * @param {{token:string, sandbox?:boolean, dryRun?:boolean, lifetime?:boolean, orgSlug?:string, fetchImpl?:Function, log?:Function}} o
+ * Team is sold per seat; pass teamBundle to sell a fixed 5-seat bundle with one shared key instead.
+ * @param {{token:string, sandbox?:boolean, dryRun?:boolean, lifetime?:boolean, teamBundle?:boolean, orgSlug?:string, previous?:any, fetchImpl?:Function, log?:Function}} o
  */
-export async function setupStore({ token, sandbox = false, dryRun = false, lifetime = true, orgSlug = null, fetchImpl = globalThis.fetch, log = console.log }) {
+export async function setupStore({ token, sandbox = false, dryRun = false, lifetime = true, teamBundle = false, orgSlug = null, previous = null, fetchImpl = globalThis.fetch, log = console.log }) {
   if (!token) throw new Error('POLAR_ACCESS_TOKEN is not set. Create an Organization Access Token in Polar → Settings → Developers.');
   const api = polarClient({ token, base: apiBaseFor({ sandbox }), fetchImpl });
 
@@ -126,8 +157,10 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
   if (!orgSlug && orgs.length > 1) throw new Error(`This token sees several organizations (${orgs.map((o) => o.slug).join(', ')}); pass --org <slug>.`);
   log(`Organization: ${org.name || org.slug} (${org.slug}) · ${sandbox ? 'sandbox' : 'production'}`);
   const created = [];
+  const problems = [];
 
-  // 1. license-key benefits
+  // 1. license-key benefits. An organization token *is* the organization, so create bodies must not
+  //    name one (Polar answers 422 "Setting organization_id is disallowed when using an organization token").
   const existingBenefits = await api.list('/v1/benefits/', { organization_id: org.id, type: 'license_keys' });
   const benefitIds = {};
   const benefitFor = async (key, overrideProps = null) => {
@@ -137,7 +170,7 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
     const spec = CATALOG.benefits[key];
     const body = {
       type: 'license_keys', description: overrideProps ? `${spec.description.replace(' (one per seat)', '')} (team bundle)` : spec.description,
-      organization_id: org.id, metadata: { veridone_sku: sku },
+      metadata: { veridone_sku: sku },
       properties: { ...spec.properties, ...(overrideProps || {}) },
     };
     created.push(`benefit ${sku}`);
@@ -155,28 +188,24 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
   for (const spec of CATALOG.products) {
     if (spec.optional === 'lifetime' && !lifetime) continue;
     let product = existingProducts.find((p) => skuOf(p) === spec.sku);
-    let used = spec;
-    let benefitId = benefitIds[spec.benefit];
-    if (product && product.metadata?.veridone_variant === 'bundle') {
-      used = { ...spec, ...spec.fallback };
-      benefitId = await benefitFor(spec.benefit, spec.fallback.benefitProperties);
-    }
+    const isBundle = spec.fallback && (product ? product.metadata?.veridone_variant === 'bundle' : teamBundle);
+    const used = isBundle ? { ...spec, ...spec.fallback, variant: 'bundle' } : spec;
+    const benefitId = isBundle ? await benefitFor(spec.benefit, spec.fallback.benefitProperties) : benefitIds[spec.benefit];
     if (!product) {
-      const body = (s) => ({
-        name: s.name, description: s.description, organization_id: org.id, prices: s.prices,
-        recurring_interval: s.recurring_interval, metadata: { veridone_sku: spec.sku, ...(s !== spec ? { veridone_variant: 'bundle' } : {}) },
-      });
+      const body = {
+        name: used.name, description: used.description, prices: used.prices, recurring_interval: used.recurring_interval,
+        metadata: { veridone_sku: spec.sku, ...(isBundle ? { veridone_variant: 'bundle' } : {}) },
+      };
       created.push(`product ${spec.sku}`);
-      if (dryRun) product = { id: `dry-run-${spec.sku}`, benefits: [] };
+      if (dryRun) product = { id: `dry-run-${spec.sku}`, benefits: [], metadata: body.metadata };
       else {
         try {
-          product = await api.post('/v1/products/', body(spec));
+          product = await api.post('/v1/products/', body);
         } catch (e) {
-          if (!spec.fallback || !(e instanceof PolarError) || e.status >= 500) throw e;
-          log(`  Seat-based pricing was refused (${e.message}); creating "${spec.fallback.name}" instead.`);
-          used = { ...spec, ...spec.fallback };
-          benefitId = await benefitFor(spec.benefit, spec.fallback.benefitProperties);
-          product = await api.post('/v1/products/', body(used));
+          if (!(e instanceof PolarError) || e.status >= 500) throw e;
+          problems.push(`${spec.sku} was not created: ${e.message}${spec.fallback ? '. To sell Team as a fixed 5-seat bundle instead, run again with --team-bundle (workflow input "team_bundle").' : ''}`);
+          created.pop();
+          continue;
         }
       }
       existingProducts.push(product);
@@ -188,7 +217,7 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
       if (!dryRun) await api.post(`/v1/products/${product.id}/benefits`, { benefits: [...attached, benefitId] });
     }
     let link = null;
-    if (!dryRun || !String(product.id).startsWith('dry-run')) {
+    if (!String(product.id).startsWith('dry-run')) {
       const links = await api.list('/v1/checkout-links/', { organization_id: org.id, product_id: product.id });
       link = links.find((l) => skuOf(l) === spec.sku) || null;
     }
@@ -201,22 +230,11 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
           label: `${used.name} — website`, metadata: { veridone_sku: spec.sku },
         });
     }
-    const price = used.prices[0];
-    products[spec.sku] = {
-      id: product.id,
-      name: used.name,
-      plan: spec.benefit,
-      label: used.label,
-      currency: price.price_currency || 'usd',
-      amount: price.amount_type === 'seat_based' ? price.seat_tiers.tiers[0].price_per_seat : price.price_amount,
-      perSeat: price.amount_type === 'seat_based',
-      minSeats: price.amount_type === 'seat_based' ? price.seat_tiers.tiers[0].min_seats : null,
-      interval: used.recurring_interval || 'once',
-      checkoutUrl: link.url,
-    };
+    const info = priceInfo(String(product.id).startsWith('dry-run') ? null : product, used);
+    products[spec.sku] = { id: product.id, name: product.name || used.name, plan: spec.benefit, ...info, checkoutUrl: link.url };
   }
 
-  const store = {
+  let store = {
     $comment: 'Store connection for paid plans. Written by tools/store-setup.mjs (the "Connect store" GitHub workflow runs it). Contains only public identifiers.',
     provider: 'polar',
     environment: sandbox ? 'sandbox' : 'production',
@@ -228,7 +246,9 @@ export async function setupStore({ token, sandbox = false, dryRun = false, lifet
     products,
     updatedAt: new Date().toISOString(),
   };
-  return { store, created };
+  // keep the file byte-identical when nothing changed, so re-runs don't publish a new release
+  if (previous && JSON.stringify(withoutStamp(previous)) === JSON.stringify(withoutStamp(store))) store = { ...store, updatedAt: previous.updatedAt };
+  return { store, created, problems };
 }
 
 function parseArgs(argv) {
@@ -246,24 +266,30 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
-    console.log('Usage: POLAR_ACCESS_TOKEN=… node tools/store-setup.mjs [--sandbox] [--dry-run] [--no-lifetime] [--org <slug>] [--out store.json]');
+    console.log('Usage: POLAR_ACCESS_TOKEN=… node tools/store-setup.mjs [--sandbox] [--dry-run] [--no-lifetime] [--team-bundle] [--org <slug>] [--out <file>]\n  Writes store.json (production) or store.sandbox.json (sandbox).');
     return 0;
   }
-  const { store, created } = await setupStore({
+  const sandbox = !!args.sandbox || process.env.POLAR_ENVIRONMENT === 'sandbox';
+  const out = path.resolve(ROOT, typeof args.out === 'string' ? args.out : sandbox ? 'store.sandbox.json' : 'store.json');
+  let previous = null;
+  try { previous = JSON.parse(fs.readFileSync(out, 'utf8')); } catch { previous = null; /* first run: nothing to compare with */ }
+  const { store, created, problems } = await setupStore({
     token: process.env.POLAR_ACCESS_TOKEN,
-    sandbox: !!args.sandbox || process.env.POLAR_ENVIRONMENT === 'sandbox',
+    sandbox,
     dryRun: !!args['dry-run'],
     lifetime: !args['no-lifetime'] && process.env.VERIDONE_LIFETIME !== 'off',
+    teamBundle: !!args['team-bundle'] || process.env.VERIDONE_TEAM_BUNDLE === 'on',
     orgSlug: typeof args.org === 'string' ? args.org : null,
+    previous,
   });
   console.log(created.length ? `Created: ${created.join(', ')}` : 'Everything already existed; nothing was created.');
-  for (const [sku, p] of Object.entries(store.products)) console.log(`  ${sku.padEnd(13)} ${p.label.padEnd(20)} ${p.checkoutUrl}`);
+  for (const [sku, p] of Object.entries(store.products)) console.log(`  ${sku.padEnd(13)} ${String(p.label).padEnd(22)} ${p.checkoutUrl}`);
   console.log(`  customer portal: ${store.portalUrl}`);
-  if (args['dry-run']) { console.log('(dry run: store.json not written)'); return 0; }
-  const out = path.resolve(ROOT, typeof args.out === 'string' ? args.out : 'store.json');
+  for (const pr of problems) console.error(`problem: ${pr}`);
+  if (args['dry-run']) { console.log('(dry run: nothing written)'); return problems.length ? 1 : 0; }
   fs.writeFileSync(out, JSON.stringify(store, null, 2) + '\n');
   console.log(`Wrote ${path.relative(process.cwd(), out) || out}`);
-  return 0;
+  return problems.length ? 1 : 0;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

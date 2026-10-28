@@ -6,3 +6,4 @@ evals/results/
 *.pem
 .veridone-vendor/
 _site/
+store.sandbox.json

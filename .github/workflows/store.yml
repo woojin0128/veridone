@@ -2,8 +2,11 @@
 # store.json, bumps the patch version and republishes the website and the plugin.
 #
 # Before running it: add a repository secret named POLAR_ACCESS_TOKEN (Polar → Settings →
-# Developers → New token, organization scopes: organizations:read, products:read/write,
-# benefits:read/write, checkout_links:read/write). Then: Actions → Connect store → Run workflow.
+# Developers → New token, scopes: organizations:read, products:read/write, benefits:read/write,
+# checkout_links:read/write). Then: Actions → Connect store → Run workflow.
+#
+# environment=sandbox only tries the setup against sandbox.polar.sh: nothing is committed or
+# published, and the resulting store.sandbox.json is shown in the run summary.
 name: Connect store
 
 on:
@@ -18,6 +21,10 @@ on:
         description: Offer the Founder's lifetime license
         type: boolean
         default: true
+      team_bundle:
+        description: Sell Team as a fixed 5-seat bundle instead of per seat
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -26,6 +33,10 @@ permissions:
 concurrency:
   group: store
   cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash   # -eo pipefail: a failing step can't hide behind a pipe
 
 jobs:
   connect:
@@ -48,32 +59,52 @@ jobs:
             echo "::error::Repository secret POLAR_ACCESS_TOKEN is not set."
             exit 1
           fi
-      - name: Create products and write store.json
+      - name: Create products and write the store file
         env:
           POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
           POLAR_ENVIRONMENT: ${{ inputs.environment }}
           VERIDONE_LIFETIME: ${{ inputs.lifetime && 'on' || 'off' }}
-        run: node tools/store-setup.mjs | tee store-setup.log
-      - name: Commit, bump the version and republish
-        env:
-          GH_TOKEN: ${{ github.token }}
+          VERIDONE_TEAM_BUNDLE: ${{ inputs.team_bundle && 'on' || 'off' }}
         run: |
+          status=0
+          node tools/store-setup.mjs > store-setup.log 2>&1 || status=$?
+          cat store-setup.log
           {
-            echo "### Store connected (${{ inputs.environment }})"
+            echo "### Store setup (${{ inputs.environment }})"
             echo '```'
             cat store-setup.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Store setup did not finish; see the log above."
+            exit "$status"
+          fi
+      - name: Show the sandbox store
+        if: inputs.environment == 'sandbox'
+        run: |
+          {
+            echo "Sandbox only: nothing was committed. To try activation against it on your computer,"
+            echo "save this as store.sandbox.json and start Claude Code with VERIDONE_STORE_FILE pointing to it."
+            echo '```json'
+            cat store.sandbox.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit, bump the version and republish
+        if: inputs.environment == 'production'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           if git diff --quiet -- store.json; then
             echo "store.json is unchanged; nothing to publish." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          node tools/bump-version.mjs patch --note "Connected the ${{ inputs.environment }} store: paid plans can be bought and activated."
+          node tools/bump-version.mjs patch --note "Connected the store: paid plans can be bought and activated."
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add store.json .claude-plugin/plugin.json package.json CHANGELOG.md
-          git commit -m "Connect ${{ inputs.environment }} store"
+          git commit -m "Connect store"
           git push
           # pushes made with GITHUB_TOKEN don't start other workflows, so start them explicitly
           gh workflow run pages.yml --ref main
           gh workflow run release.yml --ref main
+          echo "Published: the website and a new plugin release are on their way." >> "$GITHUB_STEP_SUMMARY"
