@@ -121,7 +121,12 @@ export async function startMockPolar({ organizationId = '00000000-0000-4000-8000
       try { body = raw ? JSON.parse(raw) : {}; } catch { body = {}; }
       requests.push({ method: req.method, url: req.url, body });
       if (req.url === '/store.json') return store ? send(res, 200, store) : send(res, 404, { detail: 'Not Found' });
-      if (failures.length) { const f = failures.shift(); return send(res, f, { detail: 'upstream error' }); }
+      if (failures.length) {
+        const f = failures.shift();
+        if (typeof f === 'number') return send(res, f, { detail: 'upstream error' });
+        res.writeHead(f.status, { 'content-type': f.type || 'text/html' });
+        return res.end(f.raw ?? JSON.stringify(f.body));
+      }
       const m = /^\/v1\/customer-portal\/license-keys\/(activate|validate|deactivate)$/.exec(req.url || '');
       if (!m || req.method !== 'POST') return send(res, 404, { detail: 'Not Found' });
       if (typeof body.key !== 'string' || typeof body.organization_id !== 'string') return send(res, 422, { detail: [{ loc: ['body', 'key'], msg: 'Field required', type: 'missing' }] });
@@ -171,7 +176,17 @@ export async function startMockPolar({ organizationId = '00000000-0000-4000-8000
     setStatus(key, status) { keys.get(key).status = status; },
     activations(key) { return [...keys.get(key).activations.values()]; },
     removeActivations(key) { keys.get(key).activations.clear(); },
+    /** Fail the next requests: a status code, or {status, raw|body, type} for proxy pages. */
     failNext(...statuses) { failures = failures.concat(statuses); },
+    /** Rotate a key the way the customer portal does: new key string, same activations. */
+    rotate(key) {
+      const k = keys.get(key);
+      const next = `${key.slice(0, key.length - 36)}${crypto.randomUUID().toUpperCase()}`;
+      keys.delete(key);
+      k.key = next;
+      keys.set(next, k);
+      return next;
+    },
     close() { return new Promise((r) => server.close(r)); },
   };
 }

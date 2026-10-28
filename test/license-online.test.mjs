@@ -77,7 +77,7 @@ describe('activation', () => {
     const r = await m.cli('license', 'activate', key);
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /Activated Veridone Pro \(VERIDONE-PRO-\*{4}-[0-9A-F]{6}\) for buyer@example\.com/);
-    assert.match(r.stdout, /up to 3 machines/);
+    assert.match(r.stdout, /up to 3 computers/);
     const [activation] = polar.activations(key);
     assert.match(activation.label, /^(Linux|macOS|Windows) · [0-9a-f]{8}$/);
     assert.equal(activation.meta.app, 'veridone');
@@ -97,7 +97,7 @@ describe('activation', () => {
     assert.equal(polar.activations(key).length, 1, 're-activating on the same machine reuses its slot');
 
     const off = await m.cli('license', 'deactivate');
-    assert.match(off.stdout, /License removed from this machine/);
+    assert.match(off.stdout, /License removed from this computer .*Its slot on the key is free again/);
     assert.equal(polar.activations(key).length, 0, 'the slot is released on the server');
     assert.ok(!fs.existsSync(m.stateFile));
     assert.equal((await m.cli('report', '--html', path.join(m.home, 'r2.html'))).status, 3);
@@ -126,12 +126,12 @@ describe('activation', () => {
     const other = await machine();
     const full = await other.cli('license', 'activate', single);
     assert.equal(full.status, 1);
-    assert.match(full.stderr, /maximum number of machines/);
+    assert.match(full.stderr, /maximum number of computers/);
     assert.match(full.stderr, /polar\.sh\/veridone\/portal/);
 
     const revoked = polar.issue();
     polar.setStatus(revoked, 'revoked');
-    assert.match((await other.cli('license', 'activate', revoked)).stderr, /refused this key: License key is no longer active/);
+    assert.match((await other.cli('license', 'activate', revoked)).stderr, /can't be used: License key is no longer active/);
 
     const down = await machine({ VERIDONE_POLAR_API: 'http://127.0.0.1:9' });
     const offline = await down.cli('license', 'activate', polar.issue());
@@ -189,7 +189,7 @@ describe('re-checks', () => {
     const m = await machine();
     const key = polar.issue();
     await m.cli('license', 'activate', key);
-    polar.failNext(503);
+    polar.failNext(503, 503, 503); // every retry fails
     m.patchState({ validatedAt: ago(5), checkedAt: ago(1) });
     const r = await m.cli('license', 'refresh');
     assert.equal(r.status, 1);
@@ -311,5 +311,119 @@ describe('session start upkeep', () => {
     set(ago(0.1));
     assert.match((await start('t3')).json.systemMessage, /14-day trial has ended/);
     assert.equal((await start('t4')).json.systemMessage, undefined);
+  });
+});
+
+describe('store edge cases', () => {
+  test('a key for another product of the same store does not unlock Veridone, and takes no slot', async () => {
+    const m = await machine();
+    const other = polar.issue({ prefix: 'OTHERAPP', benefitId: 'benefit-other' });
+    const r = await m.cli('license', 'activate', other);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /belongs to a different product, not Veridone/);
+    assert.equal(polar.activations(other).length, 0);
+    const ci = await machine({ VERIDONE_LICENSE_KEY: other });
+    fs.writeFileSync(path.join(ci.repo, 'src/a.js'), 'export const a = 3;\n');
+    const scan = await ci.cli('scan', '--format', 'sarif');
+    assert.equal(scan.status, 3);
+    assert.match(scan.stderr, /different product/);
+  });
+
+  test('keys are accepted in lower case', async () => {
+    const m = await machine();
+    const key = polar.issue();
+    const r = await m.cli('license', 'activate', key.toLowerCase());
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(m.readState().key, key);
+  });
+
+  test('a proxy or firewall answer never revokes a working license', async () => {
+    const m = await machine();
+    const key = polar.issue();
+    await m.cli('license', 'activate', key);
+    m.patchState({ validatedAt: ago(4), checkedAt: ago(1) });
+    polar.failNext({ status: 403, raw: '<html><body>Access denied by corporate proxy. Rate limit exceeded.</body></html>' });
+    const blocked = await m.cli('license', 'refresh');
+    assert.equal(blocked.status, 1);
+    assert.match(blocked.stderr, /proxy or firewall/);
+    assert.doesNotMatch(blocked.stderr, /maximum number/);
+    assert.equal(m.readState().status, 'granted');
+    polar.failNext({ status: 404, type: 'application/json', body: { detail: 'Not Found' } });
+    await m.cli('license', 'refresh');
+    assert.equal(m.readState().status, 'granted', 'a 404 that is not from the license API is not a verdict');
+    assert.match((await m.cli('license', 'status')).stdout, /Plan: Pro/);
+  });
+
+  test('after the key is rotated in the customer portal, activating the new key reuses this computer', async () => {
+    const m = await machine();
+    const key = polar.issue({ limit: 1 });
+    await m.cli('license', 'activate', key);
+    const rotated = polar.rotate(key);
+    const r = await m.cli('license', 'activate', rotated);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(polar.activations(rotated).length, 1);
+    assert.equal(m.readState().key, rotated);
+  });
+
+  test('deactivating with a key the server no longer knows says where to free the slot', async () => {
+    const m = await machine();
+    const key = polar.issue();
+    await m.cli('license', 'activate', key);
+    polar.rotate(key);
+    const off = await m.cli('license', 'deactivate');
+    assert.match(off.stdout, /no longer knows this computer's activation/);
+    assert.match(off.stdout, /polar\.sh\/veridone\/portal/);
+  });
+
+  test('CI retries a busy license server and survives a data folder it cannot write', async () => {
+    const key = polar.issue();
+    const m = await machine({ VERIDONE_LICENSE_KEY: key, CI: 'true' });
+    fs.writeFileSync(path.join(m.repo, 'src/a.js'), 'export const a = 4;\n');
+    polar.failNext(503, 429);
+    const r = await m.cli('scan', '--format', 'sarif');
+    assert.equal(r.status, 0, r.stderr);
+    // a data folder that can't be created: its parent is a regular file
+    const blocker = path.join(m.home, 'not-a-directory');
+    fs.writeFileSync(blocker, '');
+    const ro = await machine({ VERIDONE_LICENSE_KEY: key, CI: 'true', VERIDONE_DATA_DIR: path.join(blocker, 'data') });
+    fs.writeFileSync(path.join(ro.repo, 'src/a.js'), 'export const a = 5;\n');
+    const r2 = await ro.cli('scan', '--format', 'sarif');
+    assert.equal(r2.status, 0, r2.stderr);
+  });
+
+  test('the trial does not apply in CI', async () => {
+    const m = await machine({ CI: 'true' });
+    const t = await m.cli('license', 'trial');
+    assert.equal(t.status, 1);
+    assert.match(t.stderr, /In CI, set VERIDONE_LICENSE_KEY/);
+    const home = await machine();
+    await home.cli('license', 'trial');
+    fs.writeFileSync(path.join(home.repo, 'src/a.js'), 'export const a = 6;\n');
+    const ci = await runCliAsync(['scan', '--format', 'sarif'], { cwd: home.repo, env: { ...home.env, GITHUB_ACTIONS: 'true' } });
+    assert.equal(ci.status, 3, 'a trial started elsewhere on the runner does not unlock CI');
+    assert.doesNotMatch(ci.stderr, /license trial/);
+  });
+
+  test('a key in the environment of a dev container is re-validated in the background', async () => {
+    const key = polar.issue({ prefix: 'VERIDONE-TEAM', benefitId: 'benefit-team' });
+    const m = await machine({ VERIDONE_LICENSE_KEY: key });
+    const count = () => polar.requests.filter((q) => q.url.endsWith('/validate') && q.body.key === key).length;
+    const before = count();
+    await runHookAsync('SessionStart', { hook_event_name: 'SessionStart', session_id: 'dev-1', cwd: m.repo, source: 'startup' }, m.env);
+    const end = Date.now() + 8000;
+    while (Date.now() < end && count() === before) await new Promise((r) => setTimeout(r, 100));
+    assert.equal(count(), before + 1);
+    assert.match((await m.cli('license', 'status')).stdout, /Plan: Team/);
+    assert.equal(polar.activations(key).length, 0, 'no computer slot is used');
+  });
+
+  test('the lapse notice is shown once, not every day', async () => {
+    const m = await machine({ VERIDONE_POLAR_API: 'http://127.0.0.1:9' });
+    fs.mkdirSync(path.dirname(m.stateFile), { recursive: true });
+    fs.writeFileSync(m.stateFile, JSON.stringify({ kind: 'polar', key: polar.issue(), plan: 'pro', status: 'granted', organizationId: ORG, validatedAt: ago(15), checkedAt: new Date().toISOString() }));
+    const start = (id) => runHookAsync('SessionStart', { hook_event_name: 'SessionStart', session_id: id, cwd: m.repo, source: 'startup' }, m.env);
+    assert.match((await start('n1')).json.systemMessage, /license is inactive — not verified for 15 days/);
+    m.patchState({ validatedAt: ago(16) });
+    assert.equal((await start('n2')).json?.systemMessage, undefined);
   });
 });

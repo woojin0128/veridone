@@ -43,7 +43,7 @@ test('expiry, malformed keys and unknown plans', () => {
 
 test('the placeholder public key never validates anything', () => {
   const key = signLicense(base, priv);
-  assert.match(verifyLicense(key, '-----BEGIN PUBLIC KEY-----\nPLACEHOLDER\n-----END PUBLIC KEY-----').reason, /no vendor public key/);
+  assert.match(verifyLicense(key, '-----BEGIN PUBLIC KEY-----\nPLACEHOLDER\n-----END PUBLIC KEY-----').reason, /does not accept offline \(VD1\) keys/);
 });
 
 test('features map to plans', () => {

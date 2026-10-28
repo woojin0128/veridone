@@ -586,6 +586,7 @@ async function cmdLicense(args) {
     return r.ok || r.skipped ? 0 : 1;
   }
   if (sub === 'trial') {
+    if (L.inCI()) { err('The free trial is for your own computer. In CI, set VERIDONE_LICENSE_KEY to a Pro or Team key.'); return 1; }
     const e = L.entitlement();
     if (e.valid && e.kind !== 'trial') { out(`You already have Veridone ${planTitle(e.plan)}; no trial needed.`); return 0; }
     const r = L.startTrial();

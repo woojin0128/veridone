@@ -21,7 +21,8 @@ const DEFAULTS = {
 };
 
 export function storeFile() {
-  return path.join(pluginRoot(), 'store.json');
+  // VERIDONE_STORE_FILE lets the seller try a sandbox store (store.sandbox.json) before going live
+  return process.env.VERIDONE_STORE_FILE ? path.resolve(process.env.VERIDONE_STORE_FILE) : path.join(pluginRoot(), 'store.json');
 }
 
 /** The bundled store configuration, with defaults filled in. */
@@ -72,7 +73,8 @@ export function parseKey(key) {
   if (!k) return { kind: null };
   if (/^VD1\.[^.]+\.[^.]+$/.test(k)) return { kind: 'offline', key: k };
   const m = POLAR_KEY.exec(k);
-  if (m) return { kind: 'polar', key: k, prefix: m[1] ? m[1].toUpperCase() : null };
+  // Polar issues keys in upper case and matches them exactly
+  if (m) return { kind: 'polar', key: k.toUpperCase(), prefix: m[1] ? m[1].toUpperCase() : null };
   return { kind: null };
 }
 
