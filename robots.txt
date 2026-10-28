@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://woojin0128.github.io/veridone/sitemap.xml

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>라이선스 활성화 | Veridone</title>
+<meta name="description" content="Claude Code와 CI에서 Veridone Pro·Team 라이선스 키를 활성화하는 방법.">
+<link rel="canonical" href="https://woojin0128.github.io/veridone/ko/activate.html">
+<link rel="alternate" hreflang="en" href="https://woojin0128.github.io/veridone/activate.html">
+<link rel="alternate" hreflang="ko" href="https://woojin0128.github.io/veridone/ko/activate.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="라이선스 활성화 | Veridone">
+<meta property="og:description" content="Claude Code와 CI에서 Veridone Pro·Team 라이선스 키를 활성화하는 방법.">
+<meta property="og:url" content="https://woojin0128.github.io/veridone/ko/activate.html">
+<meta property="og:image" content="https://woojin0128.github.io/veridone/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#3a33e0">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/archivo.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="../assets/site.css?v=1.0.1">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="../ko/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 16.5l4.6 4.6L23.5 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Veridone</a>
+    <nav class="site-nav" aria-label="주요 메뉴">
+      <a href="../ko/#stops">잡아내는 것</a>
+      <a href="../ko/#pricing">가격</a>
+      <a href="https://github.com/woojin0128/veridone#readme">문서</a>
+      <a href="https://github.com/woojin0128/veridone">GitHub</a>
+      <a href="../" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+<div class="wrap"><article class="prose">
+
+<h1>라이선스 활성화</h1>
+<p class="updated">Veridone 1.0.1 이상 기준.</p>
+<h2>내 컴퓨터에서</h2>
+<ol>
+  <li>키를 복사합니다. 결제 완료 화면과 고객 포털에서 볼 수 있으며 <code>VERIDONE-PRO-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code> 형태입니다.</li>
+  <li>플러그인을 최신으로 업데이트합니다: <code>claude plugin update veridone@veridone</code></li>
+  <li>Claude Code에서 <code>/veridone:license activate &lt;키&gt;</code>를 실행합니다.</li>
+  <li><code>/veridone:license status</code>로 확인합니다.</li>
+</ol>
+<p>키 하나로 컴퓨터 3대까지 쓸 수 있습니다. Veridone은 며칠마다 백그라운드에서 키를 다시 확인하고, 인터넷이 안 되어도 14일 동안은 계속 동작합니다.</p>
+<h2>CI에서</h2>
+<p>키를 <code>VERIDONE_LICENSE_KEY</code>라는 이름의 시크릿으로 등록하세요. CI 실행은 컴퓨터 슬롯을 쓰지 않고 키만 확인합니다.</p>
+<pre>- uses: woojin0128/veridone@v1
+  id: veridone
+  with:
+    sarif: veridone.sarif
+    license-key: ${{ secrets.VERIDONE_LICENSE_KEY }}
+- uses: github/codeql-action/upload-sarif@v3
+  if: always() &amp;&amp; steps.veridone.outputs.sarif-file != ''
+  with:
+    sarif_file: veridone.sarif</pre>
+<h2>Team 좌석</h2>
+<p>Team 플랜 구매자가 고객 포털에서 이메일로 좌석을 배정합니다. 각자 초대 메일에서 좌석을 받으면 자기만의 <code>VERIDONE-TEAM-…</code> 키가 발급됩니다.</p>
+<h2>컴퓨터를 바꿀 때</h2>
+<p>기존 컴퓨터에서 <code>/veridone:license deactivate</code>를 실행하거나 고객 포털에서 지운 뒤, 새 컴퓨터에서 활성화하세요.</p>
+<h2>문제가 생기면</h2>
+<ul>
+  <li><strong>“not connected to a store yet”</strong>: 플러그인을 업데이트한 뒤 다시 시도하세요.</li>
+  <li><strong>“maximum number of computers”</strong>: 위 방법으로 컴퓨터 슬롯을 하나 비우세요.</li>
+  <li><strong>“Couldn't reach the license server”</strong>: 인터넷 연결을 확인하세요. 프록시 환경이면 <code>NODE_USE_ENV_PROXY=1</code>을 설정하세요(Node.js 22.21 또는 24 이상).</li>
+  <li>그 밖의 문제: 키를 올리지 말고 <a href="https://github.com/woojin0128/veridone/issues">이슈를 남기거나</a> 영수증 메일에 회신하세요.</li>
+</ul>
+<h2>아직 구매 전이라면</h2>
+<p><code>/veridone:license trial</code>을 실행하면 이 컴퓨터에서 14일 동안 모든 유료 기능을 쓸 수 있습니다. 카드도 계정도 필요 없습니다.</p>
+</article></div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="하단 메뉴">
+      <a href="../ko/activate.html">키 활성화</a>
+      <a href="../ko/terms.html">이용약관</a>
+      <a href="../ko/privacy.html">개인정보</a>
+      <a href="../ko/refunds.html">환불</a>
+      <a href="https://github.com/woojin0128/veridone/blob/main/CHANGELOG.md">변경 내역</a>
+      <a href="https://github.com/woojin0128/veridone/issues">지원</a>
+    </nav>
+    <p>Veridone 1.0.1 &copy; 2026 woojin0128</p>
+    <p class="disclaimer">Veridone은 독립 프로젝트로, Anthropic과 제휴하거나 Anthropic의 보증을 받지 않았습니다. Claude와 Claude Code는 Anthropic, PBC의 상표입니다.</p>
+  </div>
+</footer>
+<script src="../assets/site.js?v=1.0.1" defer></script>
+</body>
+</html>

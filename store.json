@@ -1,0 +1,15 @@
+{
+  "provider": "polar",
+  "environment": "production",
+  "organizationId": null,
+  "organizationSlug": null,
+  "portalUrl": null,
+  "keyPrefixes": {
+    "VERIDONE-PRO": "pro",
+    "VERIDONE-TEAM": "team"
+  },
+  "benefits": {},
+  "products": {},
+  "updatedAt": null,
+  "$comment": "Store connection for paid plans. Written by tools/store-setup.mjs (the 'Connect store' GitHub workflow runs it). Contains only public identifiers."
+}
