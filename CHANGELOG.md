@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 (2026-10-28)
+
+- Store and licensing hardening before launch: store setup works with an organization token and reads real prices; license checks treat only Polar's own answers as final, retry busy servers, reject keys for other products, survive key rotation and read-only CI folders; the GitHub Action skips SARIF with a warning when no license is available.
+
 ## 1.0.0
 
 First public release.

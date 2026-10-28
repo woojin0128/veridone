@@ -13,7 +13,7 @@
 | GitHub Action | `uses: woojin0128/veridone@v1` |
 | 자동화 | 테스트(CI), 버전을 올리면 자동 릴리스(Release), 사이트 자동 배포(Website), 스토어 연결(Connect store) |
 | 수익 구조 | 무료 + 14일 무료 체험 → Pro(월 $9 / 연 $79) · Team(좌석당 연 $190, 2석부터) · Founder 평생권($149, 런칭 한정) |
-| 남은 일 | **Polar 계정 연결 (아래 1단계, 본인만 할 수 있음)** |
+| 남은 일 | **① 웹사이트 공개 스위치 켜기(아래 1-0) ② Polar 계정 연결(1-1~1-4)** — 둘 다 보안상 본인만 할 수 있음 |
 
 결제 연결 전까지 웹사이트 가격표에는 "유료 플랜은 곧 열립니다"와 무료 체험 안내가 나옵니다. 연결이 끝나면 결제 버튼이 자동으로 켜집니다.
 
@@ -22,6 +22,12 @@
 ## 1. 결제 연결 (20분, 한 번만)
 
 Polar는 판매 대행(Merchant of Record) 플랫폼입니다. 법적 판매자가 Polar가 되어 전 세계 부가세·판매세를 대신 걷고 신고하므로, 1인 사업자도 해외에 소프트웨어를 팔 수 있습니다. 한국은 정산 지원 국가에 포함돼 있습니다. 라이선스 키 발급·이메일 발송·환불 시 자동 해지까지 Polar가 처리하므로 별도 서버가 필요 없습니다.
+
+### 1-0. 웹사이트 공개 (20초, 한 번만)
+
+https://github.com/woojin0128/veridone/settings/pages → **Source: Deploy from a branch** → Branch **gh-pages**, 폴더 **/(root)** → **Save**. 1~2분 뒤 https://woojin0128.github.io/veridone/ 가 열립니다. 사이트 파일은 자동화가 이미 `gh-pages` 브랜치에 올려 두었고, 이후 변경도 자동으로 반영됩니다. Polar는 계정 검토 때 이 사이트(가격표·약관·환불 정책)를 보므로 Polar 가입 전에 켜 두세요.
+
+(선택) 저장소 첫 화면 오른쪽 **About**의 톱니바퀴 → Website에 위 주소, Topics에 `claude-code`, `claude-code-plugin`, `ai-agents`, `guardrails`, `testing`을 넣으면 검색에 잘 걸립니다.
 
 ### 1-1. Polar 가입과 조직 만들기
 

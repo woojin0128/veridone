@@ -1,7 +1,7 @@
 {
   "name": "veridone",
   "displayName": "Veridone",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Stops Claude Code from faking 'done': evidence-based completion gate, anti-cheat integrity scanner (skipped tests, deleted assertions, suppressions, placeholder code), destructive-command and secret guard, noisy-output condensing, compaction-proof memory, and a repo-map MCP server.",
   "author": {
     "name": "woojin0128",
