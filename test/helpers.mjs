@@ -56,7 +56,8 @@ export function isolatedEnv(extra = {}) {
   // Tests never reach the real license server: point the store and API at a closed local port
   // unless a test passes its own mock server.
   const env = { ...process.env, HOME: home, USERPROFILE: home, VERIDONE_DATA_DIR: data, VERIDONE_POLAR_API: 'http://127.0.0.1:9', VERIDONE_STORE_URL: 'http://127.0.0.1:9/store.json', ...extra };
-  for (const k of ['CLAUDE_PLUGIN_DATA', 'CLAUDE_PROJECT_DIR', 'VERIDONE_MODE', 'VERIDONE_DISABLE', 'VERIDONE_LICENSE_KEY', 'VERIDONE_POLICY_FILE', 'CLAUDE_PLUGIN_ROOT']) {
+  // the suite itself runs in CI: don't let the runner's CI variables change what the CLI does
+  for (const k of ['CLAUDE_PLUGIN_DATA', 'CLAUDE_PROJECT_DIR', 'VERIDONE_MODE', 'VERIDONE_DISABLE', 'VERIDONE_LICENSE_KEY', 'VERIDONE_POLICY_FILE', 'CLAUDE_PLUGIN_ROOT', 'VERIDONE_STORE_FILE', 'CI', 'GITHUB_ACTIONS', 'GITLAB_CI', 'BUILDKITE', 'CIRCLECI']) {
     if (!(k in extra)) delete env[k];
   }
   return { env, home, data };
